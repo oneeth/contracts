@@ -186,6 +186,10 @@ library SafeMath {
         return c;
     }
 
+    function sub0(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a - b : 0;
+    }
+
     /**
      * @dev Returns the multiplication of two unsigned integers, reverting on
      * overflow.
@@ -878,8 +882,9 @@ contract Configurable is Governable {
 
 
 contract ONE is ERC20UpgradeSafe, Configurable {
+    address vault;
 
-	function initialize(address governor_, address oneFarm) public initializer {
+	function initialize(address governor_, address oneFarm, address vault_) public initializer {
 		Governable.initialize(governor_);
 		ERC20UpgradeSafe.__ERC20_init("One Eth", "ONE");
 		
@@ -887,8 +892,26 @@ contract ONE is ERC20UpgradeSafe, Configurable {
 		_setupDecimals(decimals);
 		
 		_mint(oneFarm, 4200 * 10 ** uint256(decimals));
+		
+		vault = vault_;
 	}
-
+	
+	function setVault(address vault_) external governance {
+	    vault = vault_;
+	}
+	
+	function mint_(address acct, uint amt) external onlyVault {
+	    _mint(acct, amt);
+	}
+	
+	function burn_(address acct, uint amt) external onlyVault {
+	    _burn(acct, amt);
+	}
+	
+	modifier onlyVault {
+	    require(msg.sender == vault, 'called only by vault');
+	    _;
+	}
 }
 
 contract ONS is ERC20UpgradeSafe, Configurable {
@@ -908,15 +931,34 @@ contract ONS is ERC20UpgradeSafe, Configurable {
 }
 
 contract ONB is ERC20UpgradeSafe, Configurable {
+    address vault;
 
-	function initialize(address governor_) override public initializer {
+	function initialize(address governor_, address vault_) virtual public initializer {
 		Governable.initialize(governor_);
 		ERC20UpgradeSafe.__ERC20_init("One Bond", "ONB");
 		
 		uint8 decimals = 18;
 		_setupDecimals(decimals);
+		
+		vault = vault_;
 	}
 
+    function _beforeTokenTransfer(address from, address to, uint256) internal virtual override {
+        require(from == address(0) || to == address(0), 'ONB is untransferable');
+    }
+    
+	function mint_(address acct, uint vol) external onlyVault {
+	    _mint(acct, vol);
+	}
+	
+	function burn_(address acct, uint vol) external onlyVault {
+	    _burn(acct, vol);
+	}
+	
+	modifier onlyVault {
+	    require(msg.sender == vault, 'called only by vault');
+	    _;
+	}
 }
 
 contract Offering is Configurable {
