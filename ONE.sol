@@ -4,25 +4,23 @@ pragma solidity ^0.6.0;
 
 import "./Include.sol";
 
-contract ONE is ERC20UpgradeSafe, Configurable {
-    address vault;
+contract VaultERC20 is ERC20UpgradeSafe, Configurable {
+    address public vault;
 
-	function initialize(address governor_, address oneFarm, address vault_) public initializer {
-		Governable.initialize(governor_);
-		ERC20UpgradeSafe.__ERC20_init("One Eth", "ONE");
-		
-		uint8 decimals = 18;
-		_setupDecimals(decimals);
-		
-		_mint(oneFarm, 4200 * 10 ** uint256(decimals));
-		
+	function __VaultERC20_init_unchained(address vault_) public governance {
 		vault = vault_;
 	}
 	
-	function setVault(address vault_) external governance {
-	    vault = vault_;
+	modifier onlyVault {
+	    require(msg.sender == vault, 'called only by vault');
+	    _;
 	}
-	
+
+    function transferFrom_(address sender, address recipient, uint256 amount) external onlyVault returns (bool) {
+        _transfer(sender, recipient, amount);
+        return true;
+    }
+    
 	function mint_(address acct, uint amt) external onlyVault {
 	    _mint(acct, amt);
 	}
@@ -30,58 +28,51 @@ contract ONE is ERC20UpgradeSafe, Configurable {
 	function burn_(address acct, uint amt) external onlyVault {
 	    _burn(acct, amt);
 	}
+}
+
+contract ONE is VaultERC20 {
+	function __ONE_init(address governor_, address vault_, address oneFarm) external initializer {
+        __Context_init_unchained();
+		__ERC20_init_unchained("One Eth", "ONE");
+		__Governable_init_unchained(governor_);
+		__VaultERC20_init_unchained(vault_);
+		__ONE_init_unchained(oneFarm);
+	}
 	
-	modifier onlyVault {
-	    require(msg.sender == vault, 'called only by vault');
-	    _;
+	function __ONE_init_unchained(address oneFarm) public governance {
+		_mint(oneFarm, 100 * 10 ** uint256(decimals()));
 	}
+	
 }
 
-contract ONS is ERC20UpgradeSafe, Configurable {
-
-	function initialize(address governor_, address onsFarm, address offering, address timelock) public initializer {
-		Governable.initialize(governor_);
-		ERC20UpgradeSafe.__ERC20_init("One Share", "ONS");
-		
-		uint8 decimals = 18;
-		_setupDecimals(decimals);
-		
-		_mint(onsFarm, 90000 * 10 ** uint256(decimals));		// 90%
-		_mint(offering, 5000 * 10 ** uint256(decimals));		//  5%
-		_mint(timelock, 5000 * 10 ** uint256(decimals));		//  5%
+contract ONS is VaultERC20 {
+	function __ONS_init(address governor_, address vault_, address onsFarm, address offering, address timelock) external initializer {
+        __Context_init_unchained();
+		__ERC20_init("One Share", "ONS");
+		__Governable_init_unchained(governor_);
+		__VaultERC20_init_unchained(vault_);
+		__ONS_init_unchained(onsFarm, offering, timelock);
+	}
+	
+	function __ONS_init_unchained(address onsFarm, address offering, address timelock) public governance {
+		_mint(onsFarm, 90000 * 10 ** uint256(decimals()));		// 90%
+		_mint(offering, 5000 * 10 ** uint256(decimals()));		//  5%
+		_mint(timelock, 5000 * 10 ** uint256(decimals()));		//  5%
 	}
 
 }
 
-contract ONB is ERC20UpgradeSafe, Configurable {
-    address vault;
-
-	function initialize(address governor_, address vault_) virtual public initializer {
-		Governable.initialize(governor_);
-		ERC20UpgradeSafe.__ERC20_init("One Bond", "ONB");
-		
-		uint8 decimals = 18;
-		_setupDecimals(decimals);
-		
-		vault = vault_;
+contract ONB is VaultERC20 {
+	function __ONB_init(address governor_, address vault_) virtual external initializer {
+        __Context_init_unchained();
+		__ERC20_init("One Bond", "ONB");
+		__Governable_init_unchained(governor_);
+		__VaultERC20_init_unchained(vault_);
 	}
 
     function _beforeTokenTransfer(address from, address to, uint256) internal virtual override {
         require(from == address(0) || to == address(0), 'ONB is untransferable');
     }
-    
-	function mint_(address acct, uint vol) external onlyVault {
-	    _mint(acct, vol);
-	}
-	
-	function burn_(address acct, uint vol) external onlyVault {
-	    _burn(acct, vol);
-	}
-	
-	modifier onlyVault {
-	    require(msg.sender == vault, 'called only by vault');
-	    _;
-	}
 }
 
 contract Offering is Configurable {
@@ -95,8 +86,12 @@ contract Offering is Configurable {
 	uint public begin;
 	uint public span;
 	
-	function initialize(address governor_, address _token, address _currency, uint _price, address _vault, uint _begin, uint _span) public initializer {
-		Governable.initialize(governor_);
+	function __Offering_init(address governor_, address _token, address _currency, uint _price, address _vault, uint _begin, uint _span) external initializer {
+		__Governable_init_unchained(governor_);
+		__Offering_init_unchained(_token, _currency, _price, _vault, _begin, _span);
+	}
+	
+	function __Offering_init_unchained(address _token, address _currency, uint _price, address _vault, uint _begin, uint _span) public initializer {
 		token = IERC20(_token);
 		currency = IERC20(_currency);
 		price = _price;
@@ -104,7 +99,7 @@ contract Offering is Configurable {
 		begin = _begin;
 		span = _span;
 	}
-		
+	
 	function offer(uint vol) external {
 		require(now >= begin, 'Not begin');
 		if(now > begin.add(span))

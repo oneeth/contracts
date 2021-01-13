@@ -25,8 +25,12 @@ contract Vault is Configurable {
     EmaOracle.Observations public twapOne;
     EmaOracle.Observations public twapOns;
     
-	function initialize(address governor_, address _one, address _ons, address _onb, address _aEth, uint _begin, uint _span) external initializer {
-		Governable.initialize(governor_);
+	function __Vault_init(address governor_, address _one, address _ons, address _onb, address _aEth, uint _begin, uint _span) external initializer {
+		__Governable_init_unchained(governor_);
+		__Vault_init_unchained(_one, _ons, _onb, _aEth, _begin, _span);
+	}
+	
+	function __Vault_init_unchained(address _one, address _ons, address _onb, address _aEth, uint _begin, uint _span) public governance {
 		one = _one;
 		ons = _ons;
 		onb = _onb;
@@ -50,28 +54,18 @@ contract Vault is Configurable {
         _;
     }
     
-    function calcEmaPrice(uint period, uint timestampStart, uint priceCumulativeStart, uint emaPriceStart, uint timestampEnd, uint priceCumulativeEnd) internal pure returns (uint) {
-        uint timeElapsed = timestampEnd.sub(timestampStart);
-        if(timeElapsed == 0)
-            return emaPriceStart;
-        uint priceAverage = priceCumulativeEnd.sub(priceCumulativeStart).div(timeElapsed);
-        if(timeElapsed >= period) {
-            return priceAverage;
-        } else {
-            return period.sub(timeElapsed).mul(emaPriceStart).add(timeElapsed.mul(priceAverage)).div(period);
-        }
-    }
-    
     function mintONE(uint amt) external updateTwap {
-        uint quota = IERC20(one).totalSupply().mul(config[_thresholdReserve_]).div(1e18).sub0(IERC20(aEth).balanceOf(address(this)));
-        require(now >= begin && now <= begin.add(span) ||  quota > 0 , 'mintONE only when aEth.balanceOf(this)/one.totalSupply() < 80%');
+        if(now < begin || now > begin.add(span)) {
+            uint quota = IERC20(one).totalSupply().sub0(IERC20(aEth).balanceOf(address(this)).mul(1e18).div(config[_thresholdReserve_]));
+            require(quota > 0 , 'mintONE only when aEth.balanceOf(this)/one.totalSupply() < 80%');
+            amt = Math.min(amt, quota);
+        }
         
-        amt = Math.min(amt, quota);
         IERC20(aEth).safeTransferFrom(msg.sender, address(this), amt.mul(config[_ratioAEthWhenMint_]).div(1e18));
         
         uint vol = amt.mul(uint(1e18).sub(config[_ratioAEthWhenMint_])).div(1e18);
         vol = twapOns.consultHi(config[_periodTwapOns_], address(aEth), vol, address(ons));
-        IERC20(ons).safeTransferFrom(msg.sender, address(this), vol);
+        ONE(ons).transferFrom_(msg.sender, address(this), vol);
         
         ONE(one).mint_(msg.sender, amt);
     }
