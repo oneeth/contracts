@@ -31,31 +31,31 @@ contract VaultERC20 is ERC20UpgradeSafe, Configurable {
 }
 
 contract ONE is VaultERC20 {
-	function __ONE_init(address governor_, address vault_, address oneFarm) external initializer {
+	function __ONE_init(address governor_, address vault_, address oneMine) external initializer {
         __Context_init_unchained();
 		__ERC20_init_unchained("One Eth", "ONE");
 		__Governable_init_unchained(governor_);
 		__VaultERC20_init_unchained(vault_);
-		__ONE_init_unchained(oneFarm);
+		__ONE_init_unchained(oneMine);
 	}
 	
-	function __ONE_init_unchained(address oneFarm) public governance {
-		_mint(oneFarm, 100 * 10 ** uint256(decimals()));
+	function __ONE_init_unchained(address oneMine) public governance {
+		_mint(oneMine, 100 * 10 ** uint256(decimals()));
 	}
 	
 }
 
 contract ONS is VaultERC20 {
-	function __ONS_init(address governor_, address vault_, address onsFarm, address offering, address timelock) external initializer {
+	function __ONS_init(address governor_, address vault_, address onsMine, address offering, address timelock) external initializer {
         __Context_init_unchained();
 		__ERC20_init("One Share", "ONS");
 		__Governable_init_unchained(governor_);
 		__VaultERC20_init_unchained(vault_);
-		__ONS_init_unchained(onsFarm, offering, timelock);
+		__ONS_init_unchained(onsMine, offering, timelock);
 	}
 	
-	function __ONS_init_unchained(address onsFarm, address offering, address timelock) public governance {
-		_mint(onsFarm, 90000 * 10 ** uint256(decimals()));		// 90%
+	function __ONS_init_unchained(address onsMine, address offering, address timelock) public governance {
+		_mint(onsMine, 90000 * 10 ** uint256(decimals()));		// 90%
 		_mint(offering, 5000 * 10 ** uint256(decimals()));		//  5%
 		_mint(timelock, 5000 * 10 ** uint256(decimals()));		//  5%
 	}
