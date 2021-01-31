@@ -7,7 +7,7 @@ import "./Include.sol";
 contract ApprovedERC20 is ERC20UpgradeSafe, Configurable {
     address public operator;
 
-	function __VaultERC20_init_unchained(address operator_) public governance {
+	function __ApprovedERC20_init_unchained(address operator_) public governance {
 		operator = operator_;
 	}
 	
@@ -37,7 +37,7 @@ contract ONE is MintableERC20 {
         __Context_init_unchained();
 		__ERC20_init_unchained("One Eth", "ONE");
 		__Governable_init_unchained(governor_);
-		__VaultERC20_init_unchained(vault_);
+		__ApprovedERC20_init_unchained(vault_);
 		__ONE_init_unchained(oneMine);
 	}
 	
@@ -52,7 +52,7 @@ contract ONS is ApprovedERC20 {
         __Context_init_unchained();
 		__ERC20_init("One Share", "ONS");
 		__Governable_init_unchained(governor_);
-		__VaultERC20_init_unchained(oneMinter_);
+		__ApprovedERC20_init_unchained(oneMinter_);
 		__ONS_init_unchained(onsMine, offering, timelock);
 	}
 	
@@ -69,7 +69,7 @@ contract ONB is MintableERC20 {
         __Context_init_unchained();
 		__ERC20_init("One Bond", "ONB");
 		__Governable_init_unchained(governor_);
-		__VaultERC20_init_unchained(vault_);
+		__ApprovedERC20_init_unchained(vault_);
 	}
 
     function _beforeTokenTransfer(address from, address to, uint256) internal virtual override {
