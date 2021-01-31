@@ -4,33 +4,35 @@ pragma solidity ^0.6.0;
 
 import "./Include.sol";
 
-contract VaultERC20 is ERC20UpgradeSafe, Configurable {
-    address public vault;
+contract ApprovedERC20 is ERC20UpgradeSafe, Configurable {
+    address public operator;
 
-	function __VaultERC20_init_unchained(address vault_) public governance {
-		vault = vault_;
+	function __VaultERC20_init_unchained(address operator_) public governance {
+		operator = operator_;
 	}
 	
-	modifier onlyVault {
-	    require(msg.sender == vault, 'called only by vault');
+	modifier onlyOperator {
+	    require(msg.sender == operator, 'called only by operator');
 	    _;
 	}
 
-    function transferFrom_(address sender, address recipient, uint256 amount) external onlyVault returns (bool) {
+    function transferFrom_(address sender, address recipient, uint256 amount) external onlyOperator returns (bool) {
         _transfer(sender, recipient, amount);
         return true;
     }
-    
-	function mint_(address acct, uint amt) external onlyVault {
+}
+
+contract MintableERC20 is ApprovedERC20 {
+	function mint_(address acct, uint amt) external onlyOperator {
 	    _mint(acct, amt);
 	}
 	
-	function burn_(address acct, uint amt) external onlyVault {
+	function burn_(address acct, uint amt) external onlyOperator {
 	    _burn(acct, amt);
 	}
 }
 
-contract ONE is VaultERC20 {
+contract ONE is MintableERC20 {
 	function __ONE_init(address governor_, address vault_, address oneMine) external initializer {
         __Context_init_unchained();
 		__ERC20_init_unchained("One Eth", "ONE");
@@ -45,12 +47,12 @@ contract ONE is VaultERC20 {
 	
 }
 
-contract ONS is VaultERC20 {
-	function __ONS_init(address governor_, address vault_, address onsMine, address offering, address timelock) external initializer {
+contract ONS is ApprovedERC20 {
+	function __ONS_init(address governor_, address oneMinter_, address onsMine, address offering, address timelock) external initializer {
         __Context_init_unchained();
 		__ERC20_init("One Share", "ONS");
 		__Governable_init_unchained(governor_);
-		__VaultERC20_init_unchained(vault_);
+		__VaultERC20_init_unchained(oneMinter_);
 		__ONS_init_unchained(onsMine, offering, timelock);
 	}
 	
@@ -62,7 +64,7 @@ contract ONS is VaultERC20 {
 
 }
 
-contract ONB is VaultERC20 {
+contract ONB is MintableERC20 {
 	function __ONB_init(address governor_, address vault_) virtual external initializer {
         __Context_init_unchained();
 		__ERC20_init("One Bond", "ONB");
@@ -91,7 +93,7 @@ contract Offering is Configurable {
 		__Offering_init_unchained(_token, _currency, _price, _vault, _begin, _span);
 	}
 	
-	function __Offering_init_unchained(address _token, address _currency, uint _price, address _vault, uint _begin, uint _span) public initializer {
+	function __Offering_init_unchained(address _token, address _currency, uint _price, address _vault, uint _begin, uint _span) public governance {
 		token = IERC20(_token);
 		currency = IERC20(_currency);
 		price = _price;
@@ -109,9 +111,15 @@ contract Offering is Configurable {
 				revert('offer over');
 		vol = Math.min(vol, token.balanceOf(address(this)));
 		uint amt = vol.mul(price).div(1e18);
-		currency.safeTransferFrom(msg.sender, vault, amt);
+		currency.safeTransferFrom(msg.sender, address(this), amt);
+		currency.approve(vault, amt);
+		IVault(vault).receiveAEthFrom(address(this), amt);
 		token.safeTransfer(msg.sender, vol);
 	}
+}
+
+interface IVault {
+    function receiveAEthFrom(address from, uint vol) external;
 }
 
 contract Timelock is Configurable {
