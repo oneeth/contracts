@@ -194,7 +194,7 @@ contract Vault is Constant, Configurable {
         totalEthValue = totalEthValue.add(vol.mul(1e18).div(aEth.ratio()));     // todo confirm
     }
     
-    function sendAEthTo(address to, uint vol) public {
+    function _sendAEthTo(address to, uint vol) internal {
         totalEthValue = totalEthValue.sub(vol.mul(1e18).div(aEth.ratio()));     // todo confirm
         aEth.transfer(to, vol);
     }
