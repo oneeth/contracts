@@ -148,7 +148,7 @@ contract Vault is Constant, Configurable {
     }
     
     function rebaseable() public view returns (uint aEthVol, uint aEthRatio, uint onsVol, uint onsRatio, uint oneVol) {
-        uint aEthPrice = 1e36 / aEth.ratio();       // todo confirm
+        uint aEthPrice = 1e36 / aEth.ratio();
         uint onsPrice  = onsPriceLo();
         uint aEthBalance = aEth.balanceOf(oneMinter);
         uint onsBalance  = ons.balanceOf(oneMinter);
@@ -191,16 +191,16 @@ contract Vault is Constant, Configurable {
     
     function receiveAEthFrom(address from, uint vol) public {
         aEth.transferFrom(from, address(this), vol);
-        totalEthValue = totalEthValue.add(vol.mul(1e18).div(aEth.ratio()));     // todo confirm
+        totalEthValue = totalEthValue.add(vol.mul(1e18).div(aEth.ratio()));
     }
     
     function _sendAEthTo(address to, uint vol) internal {
-        totalEthValue = totalEthValue.sub(vol.mul(1e18).div(aEth.ratio()));     // todo confirm
+        totalEthValue = totalEthValue.sub(vol.mul(1e18).div(aEth.ratio()));
         aEth.transfer(to, vol);
     }
     
     function interests() public view returns (uint) {
-        return aEth.balanceOf(address(this)).mul(1e18).div(aEth.ratio()).sub(totalEthValue);     // todo confirm
+        return aEth.balanceOf(address(this)).mul(1e18).div(aEth.ratio()).sub(totalEthValue);
     }
 }
 
@@ -373,7 +373,7 @@ contract OneMinter is Constant, Configurable {
         uint ratioAEthWhenMint = vault.getConfig(_ratioAEthWhenMint_);
         (uint round, uint input, uint output) = unpackRIO(_aEthRioIn[_aEthRound]);
         output = oneVol.mul(ratioAEthWhenMint).div(aEthVol).mul(input.mul(aEthRatio).div(1e18)).div(1e18).add(output);
-        input = uint(1e18).sub(aEthRatio).mul(input);
+        input = uint(1e18).sub(aEthRatio).mul(input).div(1e18);
         _aEthRioIn[round] = packRIO(round, input, output);
         if(input == 0)
             _aEthRioIn[++_aEthRound] = packRIO(++round, INITIAL_INPUT, 0);
