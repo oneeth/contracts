@@ -27,6 +27,7 @@ contract Vault is Constant, Configurable {
     bytes32 internal constant _rebaseInterval_          = 'rebaseInterval';
     bytes32 internal constant _rebaseThreshold_         = 'rebaseThreshold';
     bytes32 internal constant _rebaseCap_               = 'rebaseCap';
+    bytes32 internal constant _burnOneThreshold_        = 'burnOneThreshold';
     
     address public oneMinter;
     ONE public one;
@@ -66,6 +67,7 @@ contract Vault is Constant, Configurable {
 		config[_rebaseThreshold_]   = 1.05 ether;
 		config[_rebaseCap_]         = 0.05 ether;   // 5%
 		rebaseTime = now;
+		config[_burnOneThreshold_]  = 1.0 ether;
 	}
 	
 	function twapInit(address swapFactory) external governance {
@@ -109,8 +111,14 @@ contract Vault is Constant, Configurable {
         
     }
     
+    function burnableONE(uint amt) public view returns (uint) {
+        require(onePriceHi() < config[_burnOneThreshold_], 'ONE price is not low enough to burn');
+        return amt.mul(aEth.balanceOf(address(this))).div(one.totalSupply());
+    }
+    
     function burnONE(uint amt) external {
-        
+        one.burn_(msg.sender, amt);
+        aEth.transfer(msg.sender, burnableONE(amt));
     }
     
     function burnONB(uint vol) external {
